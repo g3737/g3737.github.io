@@ -7,7 +7,7 @@ window.onload = function() {
     const userId = sessionStorage.getItem("vk_user_id");
 
     if (accessToken && userId) {
-        vkidOnSuccess({ access_token: accessToken, user_id: userId });
+        fetchUserProfile(accessToken, userId);
     }
 
     const today = new Date();
@@ -94,44 +94,39 @@ function displayPhotos(photos) {
 
     photos.forEach(photo => {
         const img = document.createElement("img");
-        img.src = photo.sizes[0].url;
-        img.classList.add("photo-item");
+        img.src = photo.sizes[0].url; 
+        img.alt = "VK Photo";
+        img.onclick = () => openModal(photo.owner_id, photo.id); 
         gallery.appendChild(img);
     });
 }
 
-function updatePagination(totalPhotos) {
-    const totalPages = Math.ceil(totalPhotos / photosPerPage);
-    document.getElementById("pageInfo").textContent = `Page ${currentPage} of ${totalPages}`;
-    document.getElementById("prevPage").disabled = currentPage === 1;
-    document.getElementById("nextPage").disabled = currentPage === totalPages;
+function openModal(ownerId, photoId) {
+    const modal = document.getElementById("vkProfileModal");
+    const vkProfileDetails = document.getElementById("vkProfileDetails");
+    vkProfileDetails.innerHTML = `<p>Owner ID: ${ownerId}</p><p>Photo ID: ${photoId}</p>`;
+    modal.style.display = "block"; 
+}
+
+function closeModal() {
+    document.getElementById("vkProfileModal").style.display = "none";
 }
 
 function changePage(direction) {
     currentPage += direction;
-
-    if (currentPage < 1) {
-        currentPage = 1;
-    }
-
-    fetchPhotos(); 
+    applyFilters(); 
 }
 
-function login() {
-    const vkAppId = 52496362; // Ваш ID приложения VK
-    VKIDSDK.Auth.login(vkAppId)
-        .then(data => {
-            vkidOnSuccess(data);
-        })
-        .catch(error => console.error("Login error:", error));
+function logout() {
+    sessionStorage.removeItem("vk_access_token");
+    sessionStorage.removeItem("vk_user_id");
+    document.getElementById("profileInfo").style.display = "none"; 
+    document.getElementById("vkLoginButton").style.display = "block"; 
+    alert("Logged out successfully");
 }
 
-function vkidOnSuccess(data) {
-    const { access_token, user_id } = data;
-    sessionStorage.setItem("vk_access_token", access_token);
-    sessionStorage.setItem("vk_user_id", user_id);
-
-    fetch(`https://cors-anywhere.herokuapp.com/https://api.vk.com/method/users.get?user_ids=${user_id}&access_token=${access_token}&v=5.131`)
+function fetchUserProfile(accessToken, userId) {
+    fetch(`https://cors-anywhere.herokuapp.com/https://api.vk.com/method/users.get?user_ids=${userId}&access_token=${accessToken}&v=5.131`)
         .then(response => response.json())
         .then(profileData => {
             if (profileData.response && profileData.response.length > 0) {
@@ -144,22 +139,4 @@ function vkidOnSuccess(data) {
             }
         })
         .catch(error => console.error("Error fetching profile:", error));
-}
-
-function logout() {
-    const accessToken = sessionStorage.getItem("vk_access_token");
-
-    if (accessToken && 'VKIDSDK' in window) {
-        VKIDSDK.Auth.logout(accessToken)
-            .then(() => {
-                sessionStorage.removeItem("vk_access_token");
-                sessionStorage.removeItem("vk_user_id");
-                document.getElementById("profileInfo").style.display = "none"; 
-                document.getElementById("vkLoginButton").style.display = "block"; 
-                alert("Logged out successfully");
-            })
-            .catch(error => console.error("Logout error:", error));
-    } else {
-        console.warn("No access token found or VKIDSDK not available.");
-    }
 }
