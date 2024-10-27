@@ -1,5 +1,5 @@
 let myMap; 
-
+let token;
 
 // После перенаправления на ваш redirect_uri
 window.onload = function() {
@@ -22,6 +22,7 @@ function exchangeCodeForToken(code) {
         .then(response => response.json())
         .then(data => {
             if (data.access_token) {
+				token = access_token;
                 sessionStorage.setItem("vk_access_token", data.access_token);
                 sessionStorage.setItem("vk_user_id", data.user_id);
                 loadUserProfile(data.access_token, data.user_id); // Загрузить информацию о профиле
