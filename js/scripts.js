@@ -1,40 +1,14 @@
 let myMap; 
-let token;
 
-// После перенаправления на ваш redirect_uri
 window.onload = function() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const code = urlParams.get('code');
+    const accessToken = sessionStorage.getItem("vk_access_token");
+    const userId = sessionStorage.getItem("vk_user_id");
 
-    if (code) {
-        exchangeCodeForToken(code);
+    if (accessToken && userId) {
+        // Загрузить профиль
+        vkidOnSuccess({ access_token: accessToken, user_id: userId });
     }
-};
 
-function exchangeCodeForToken(code) {
-    const clientId = 52496362;
-    const clientSecret = "MdVr0HkosHY8GvAmarit";
-    const redirectUri = "https://g3737.github.io"; // ваш адрес перенаправления
-
-    const tokenUrl = `https://api.vk.com/oauth/access_token?client_id=${clientId}&client_secret=${clientSecret}&redirect_uri=${redirectUri}&code=${code}&v=5.131`;
-
-    fetch(tokenUrl)
-        .then(response => response.json())
-        .then(data => {
-            if (data.access_token) {
-				token = access_token;
-                sessionStorage.setItem("vk_access_token", data.access_token);
-                sessionStorage.setItem("vk_user_id", data.user_id);
-                loadUserProfile(data.access_token, data.user_id); // Загрузить информацию о профиле
-            } else {
-                console.error("Error getting access token:", data);
-            }
-        })
-        .catch(error => console.error("Error:", error));
-}
-
-window.onload = function() {
- 
     const today = new Date();
     const lastMonth = new Date();
     lastMonth.setMonth(today.getMonth() - 1);
@@ -76,7 +50,7 @@ function drawCircle(coords, radius) {
 
     // Создаем круг
     myMap.circle = new ymaps.Circle([coords, radius], {
-        balloonContent: `Radius: ${radius} m`
+        balloonContent: Radius: ${radius} m
     }, {
         fillColor: '#00FF0066',
         strokeColor: '#FF0000',
@@ -102,17 +76,17 @@ function applyFilters(clickedCoords) {
 
 // Получение фотографий по координатам и другим параметрам
 function fetchPhotos(lat, long, startTime, endTime, radius) {
-    const accessToken = token;
+    const accessToken = sessionStorage.getItem("vk_access_token");
     const userId = sessionStorage.getItem("vk_user_id");
 
     if (!accessToken || !userId) {
         console.error("VK access token or user ID is missing.");
         return;
     }
- console.log("Token:", token);
-    const url = `https://api.vk.com/method/photos.search?` +
-                `lat=${lat}&long=${long}&start_time=${startTime}&end_time=${endTime}&` +
-                `radius=${radius}&count=20&access_token=${accessToken}&v=5.131`;
+ console.log("Token:", accessToken);
+    const url = https://api.vk.com/method/photos.search? +
+                lat=${lat}&long=${long}&start_time=${startTime}&end_time=${endTime}& +
+                radius=${radius}&count=20&access_token=${accessToken}&v=5.131;
 
     fetch(url)
         .then(response => response.json())
@@ -145,7 +119,7 @@ function vkidOnSuccess(data) {
     sessionStorage.setItem("vk_user_id", user_id);
 
     // Запрос к VK API для получения имени профиля
-    fetch(`https://api.vk.com/method/users.get?user_ids=${user_id}&access_token=${access_token}&v=5.131`)
+    fetch(https://api.vk.com/method/users.get?user_ids=${user_id}&access_token=${access_token}&v=5.131)
         .then(response => response.json())
         .then(profileData => {
             if (profileData.response && profileData.response.length > 0) {
