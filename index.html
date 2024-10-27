@@ -7,37 +7,115 @@
     <title>VK Photo Map</title>
     <link rel="stylesheet" href="css/styles.css">
     <script src="https://api-maps.yandex.ru/2.1/?lang=en_RU" type="text/javascript"></script>
-    <script src="https://unpkg.com/@vkid/sdk@<3.0.0/dist-sdk/umd/index.js"></script>
-    <script type="text/javascript" src="js/scripts.js"></script>
+    <script src="js/scripts.js"></script>
 </head>
 <body>
 
-    <header>
-        <h1>VK Photo Map</h1>
-        <div id="profileInfo" style="display: none;">
-            <span id="profileName"></span>
-            <button onclick="logout()">Logout</button>
-        </div>
-        <div id="vkLoginButton" style="display: block;">
-            <button id="loginBtn" onclick="startAuth()">Login with VK</button>
-        </div>
-    </header>
-
-    <section id="map-section">
-        <div id="map"></div>
-    </section>
-
-    <section id="gallery">
-        <h2>Gallery of Photos</h2>
-        <div id="photoGallery" class="photo-grid"></div>
-    </section>
-
-    <div id="vkProfileModal" class="modal">
-        <div class="modal-content">
-            <span class="close" onclick="closeModal()">&times;</span>
-            <div id="vkProfileDetails"></div>
-        </div>
+<header>
+    <h1>VK Photo Map</h1>
+    <div id="profileInfo" style="display: none;">
+        <span id="profileName"></span>
+        <button onclick="logout()">Logout</button>
     </div>
+</header>
+
+<section id="map-section">
+    <div id="map"></div>
+</section>
+
+<section id="search-form">
+    <form id="searchForm" autocomplete="off">
+        <input type="text" id="address" placeholder="Enter street name">
+        <input type="text" id="vkID" placeholder="Search by VK ID">
+
+        <select id="ageFilter">
+            <option value="">Select Age</option>
+            <option value="18-25">18-25</option>
+            <option value="26-35">26-35</option>
+            <option value="36-50">36-50</option>
+        </select>
+
+        <select id="genderFilter">
+            <option value="">Select Gender</option>
+            <option value="male">Male</option>
+            <option value="female">Female</option>
+        </select>
+
+        <input type="text" id="interestFilter" placeholder="Interests (e.g., travel, sports)">
+        <input type="text" id="communityFilter" placeholder="Community (e.g., group ID)">
+        <input type="number" id="friendsFilter" placeholder="Number of friends (e.g., >100)">
+        
+        <input type="number" id="radiusFilter" placeholder="Radius (m)" min="1" value="100">
+        <input type="date" id="startDate" placeholder="Start Date">
+        <input type="date" id="endDate" placeholder="End Date">
+
+        <button type="button" onclick="applyFilters()">Search</button>
+    </form>
+</section>
+
+<section id="gallery">
+    <h2>Gallery of Photos</h2>
+    <div id="photoGallery" class="photo-grid"></div>
+    <div id="paginationControls">
+        <button id="prevPage" onclick="changePage(-1)">Previous</button>
+        <span id="pageInfo">Page 1</span>
+        <button id="nextPage" onclick="changePage(1)">Next</button>
+    </div>
+</section>
+
+<div id="vkProfileModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeModal()">&times;</span>
+        <div id="vkProfileDetails"></div>
+    </div>
+</div>
+
+<div>
+    <script src="https://unpkg.com/@vkid/sdk@<3.0.0/dist-sdk/umd/index.js"></script>
+    <script type="text/javascript">
+        if ('VKIDSDK' in window) {
+            const VKID = window.VKIDSDK;
+
+            VKID.Config.init({
+                app: 52496362,
+                redirectUrl: 'https://g3737.github.io',
+                responseMode: VKID.ConfigResponseMode.Callback,
+                source: VKID.ConfigSource.LOWCODE,
+            });
+
+            const floatingOneTap = new VKID.FloatingOneTap();
+
+            floatingOneTap.render({
+                scheme: 'dark',
+                appName: 'geomap',
+                showAlternativeLogin: true
+            })
+            .on(VKID.WidgetEvents.ERROR, vkidOnError)
+            .on(VKID.FloatingOneTapInternalEvents.LOGIN_SUCCESS, function (payload) {
+                const code = payload.code;
+                const deviceId = payload.device_id;
+
+                VKID.Auth.exchangeCode(code, deviceId)
+                    .then(vkidOnSuccess)
+                    .catch(vkidOnError);
+            });
+        
+            function vkidOnSuccess(data) {
+                floatingOneTap.close();
+                // Обработка полученного результата
+                const { access_token, user_id } = data;
+                sessionStorage.setItem("vk_access_token", access_token);
+                sessionStorage.setItem("vk_user_id", user_id);
+               
+            }
+        
+            function vkidOnError(error) {
+                console.error("VKIDSDK error:", error);
+            }
+
+        }
+    </script>
+</div>
 
 </body>
 </html>
