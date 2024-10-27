@@ -50,7 +50,7 @@ function drawCircle(coords, radius) {
 
     // Создаем круг
     myMap.circle = new ymaps.Circle([coords, radius], {
-        balloonContent: Radius: ${radius} m
+        balloonContent: `Radius: ${radius} m`
     }, {
         fillColor: '#00FF0066',
         strokeColor: '#FF0000',
@@ -84,9 +84,9 @@ function fetchPhotos(lat, long, startTime, endTime, radius) {
         return;
     }
  console.log("Token:", accessToken);
-    const url = https://api.vk.com/method/photos.search? +
-                lat=${lat}&long=${long}&start_time=${startTime}&end_time=${endTime}& +
-                radius=${radius}&count=20&access_token=${accessToken}&v=5.131;
+    const url = `https://api.vk.com/method/photos.search?` +
+                `lat=${lat}&long=${long}&start_time=${startTime}&end_time=${endTime}&` +
+                `radius=${radius}&count=20&access_token=${accessToken}&v=5.131`;
 
     fetch(url)
         .then(response => response.json())
@@ -119,7 +119,7 @@ function vkidOnSuccess(data) {
     sessionStorage.setItem("vk_user_id", user_id);
 
     // Запрос к VK API для получения имени профиля
-    fetch(https://api.vk.com/method/users.get?user_ids=${user_id}&access_token=${access_token}&v=5.131)
+    fetch(`https://api.vk.com/method/users.get?user_ids=${user_id}&access_token=${access_token}&v=5.131`)
         .then(response => response.json())
         .then(profileData => {
             if (profileData.response && profileData.response.length > 0) {
