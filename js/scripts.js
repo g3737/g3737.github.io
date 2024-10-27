@@ -1,6 +1,5 @@
-let myMap;
-let currentPage = 1; 
-const photosPerPage = 20; 
+let myMap; 
+let codeVerifier; // Переменная для хранения code_verifier
 
 window.onload = function() {
     const accessToken = sessionStorage.getItem("vk_access_token");
@@ -10,16 +9,9 @@ window.onload = function() {
         fetchUserProfile(accessToken, userId);
     }
 
-    const today = new Date();
-    const lastMonth = new Date();
-    lastMonth.setMonth(today.getMonth() - 1);
-
-    document.getElementById('startDate').value = lastMonth.toISOString().split('T')[0];
-    document.getElementById('endDate').value = today.toISOString().split('T')[0];
+    // Инициализация карты
+    ymaps.ready(initMap);
 };
-
-// Инициализация карты при загрузке страницы
-ymaps.ready(initMap);
 
 // Инициализация карты
 function initMap() {
@@ -27,96 +19,87 @@ function initMap() {
         center: [55.76, 37.64],
         zoom: 13
     });
-
-    myMap.events.add('click', function (e) {
-        var coords = e.get('coords'); 
-        applyFilters(coords); 
-    });
 }
 
-function drawCircle(coords, radius) {
-    if (myMap.circle) {
-        myMap.geoObjects.remove(myMap.circle);
-    }
+// Начало авторизации
+async function startAuth() {
+    codeVerifier = generateCodeVerifier();
+    const codeChallenge = await generateCodeChallenge(codeVerifier);
+    const state = generateRandomState(); // Генерация состояния
 
-    myMap.circle = new ymaps.Circle([coords, radius], {
-        balloonContent: `Radius: ${radius} m`
-    }, {
-        fillColor: '#00FF0066',
-        strokeColor: '#FF0000',
-        strokeWidth: 2
-    });
-
-    myMap.geoObjects.add(myMap.circle);
+    const authUrl = `https://id.vk.com/authorize?response_type=code&client_id=52496362&redirect_uri=https://g3737.github.io&state=${state}&code_challenge=${codeChallenge}&code_challenge_method=S256`;
+    window.location.href = authUrl;
 }
 
-function applyFilters(clickedCoords) {
-    const radius = parseFloat(document.getElementById('radiusFilter').value);
-    const startDate = new Date(document.getElementById('startDate').value).getTime() / 1000;
-    const endDate = new Date(document.getElementById('endDate').value).getTime() / 1000;
-
-    if (radius > 0) {
-        drawCircle(clickedCoords, radius);
-    }
-
-    fetchPhotos(clickedCoords[0], clickedCoords[1], startDate, endDate, radius);
+// Генерация code_verifier
+function generateCodeVerifier() {
+    const array = new Uint32Array(32);
+    window.crypto.getRandomValues(array);
+    return Array.from(array).map(num => String.fromCharCode(num % 95 + 32)).join('');
 }
 
-function fetchPhotos(lat, long, startTime, endTime, radius) {
-    const accessToken = sessionStorage.getItem("vk_access_token");
-    const userId = sessionStorage.getItem("vk_user_id");
+// Генерация code_challenge
+async function generateCodeChallenge(codeVerifier) {
+    const hash = await sha256(codeVerifier);
+    return base64UrlEncode(hash);
+}
 
-    if (!accessToken || !userId) {
-        console.error("VK access token or user ID is missing.");
-        return;
-    }
+// Шифрование с использованием SHA-256
+async function sha256(message) {
+    const msgBuffer = new TextEncoder().encode(message);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+    return new Uint8Array(hashBuffer);
+}
 
-    const url = `https://cors-anywhere.herokuapp.com/https://api.vk.com/method/photos.search?` +
-                `lat=${lat}&long=${long}&start_time=${startTime}&end_time=${endTime}&` +
-                `radius=${radius}&count=${photosPerPage}&access_token=${accessToken}&v=5.131&page=${currentPage}`;
+// Преобразование в формат Base64 URL
+function base64UrlEncode(arrayBuffer) {
+    const binaryString = String.fromCharCode(...arrayBuffer);
+    return btoa(binaryString).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
 
-    fetch(url)
+// Генерация случайного состояния
+function generateRandomState() {
+    return Math.random().toString(36).substring(2);
+}
+
+// Обработка успешной авторизации
+function handleAuthResponse() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get('code');
+    const state = urlParams.get('state');
+
+    // Запрос токена доступа
+    fetch(`https://oauth.vk.com/access_token?client_id=52496362&client_secret=<ВАШ_CLIENT_SECRET>&code=${code}&redirect_uri=https://g3737.github.io`)
         .then(response => response.json())
         .then(data => {
-            if (data.response) {
-                displayPhotos(data.response.items);
-                updatePagination(data.response.count); 
+            if (data.access_token) {
+                sessionStorage.setItem("vk_access_token", data.access_token);
+                fetchUserProfile(data.access_token, data.user_id);
             } else {
-                console.error("Error fetching photos:", data);
+                console.error("Error during VK authorization:", data);
             }
         })
-        .catch(error => console.error("Error:", error));
+        .catch(error => console.error("Error fetching access token:", error));
 }
 
-function displayPhotos(photos) {
-    const gallery = document.getElementById("photoGallery");
-    gallery.innerHTML = "";
-
-    photos.forEach(photo => {
-        const img = document.createElement("img");
-        img.src = photo.sizes[0].url; 
-        img.alt = "VK Photo";
-        img.onclick = () => openModal(photo.owner_id, photo.id); 
-        gallery.appendChild(img);
-    });
+// Получение профиля пользователя
+function fetchUserProfile(accessToken, userId) {
+    fetch(`https://api.vk.com/method/users.get?user_ids=${userId}&access_token=${accessToken}&v=5.131`)
+        .then(response => response.json())
+        .then(profileData => {
+            if (profileData.response && profileData.response.length > 0) {
+                const profileName = profileData.response[0].first_name + " " + profileData.response[0].last_name;
+                document.getElementById("profileName").textContent = profileName;
+                document.getElementById("profileInfo").style.display = "block"; // Показать информацию профиля
+                document.getElementById("vkLoginButton").style.display = "none"; // Скрыть кнопку входа
+            } else {
+                console.error("Profile data not found:", profileData);
+            }
+        })
+        .catch(error => console.error("Error fetching profile:", error));
 }
 
-function openModal(ownerId, photoId) {
-    const modal = document.getElementById("vkProfileModal");
-    const vkProfileDetails = document.getElementById("vkProfileDetails");
-    vkProfileDetails.innerHTML = `<p>Owner ID: ${ownerId}</p><p>Photo ID: ${photoId}</p>`;
-    modal.style.display = "block"; 
-}
-
-function closeModal() {
-    document.getElementById("vkProfileModal").style.display = "none";
-}
-
-function changePage(direction) {
-    currentPage += direction;
-    applyFilters(); 
-}
-
+// Функция выхода
 function logout() {
     sessionStorage.removeItem("vk_access_token");
     sessionStorage.removeItem("vk_user_id");
@@ -125,18 +108,7 @@ function logout() {
     alert("Logged out successfully");
 }
 
-function fetchUserProfile(accessToken, userId) {
-    fetch(`https://cors-anywhere.herokuapp.com/https://api.vk.com/method/users.get?user_ids=${userId}&access_token=${accessToken}&v=5.131`)
-        .then(response => response.json())
-        .then(profileData => {
-            if (profileData.response && profileData.response.length > 0) {
-                const profileName = profileData.response[0].first_name + " " + profileData.response[0].last_name;
-                document.getElementById("profileName").textContent = profileName;
-                document.getElementById("profileInfo").style.display = "block"; 
-                document.getElementById("vkLoginButton").style.display = "none"; 
-            } else {
-                console.error("Profile data not found:", profileData);
-            }
-        })
-        .catch(error => console.error("Error fetching profile:", error));
+// Закрытие модального окна
+function closeModal() {
+    document.getElementById("vkProfileModal").style.display = "none";
 }
