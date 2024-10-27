@@ -12,8 +12,8 @@ window.onload = function() {
 };
 
 function exchangeCodeForToken(code) {
-    const clientId = "<идентификатор приложения>";
-    const clientSecret = "<секретный ключ приложения>";
+    const clientId = 52496362;
+    const clientSecret = "MdVr0HkosHY8GvAmarit";
     const redirectUri = "https://g3737.github.io"; // ваш адрес перенаправления
 
     const tokenUrl = `https://api.vk.com/oauth/access_token?client_id=${clientId}&client_secret=${clientSecret}&redirect_uri=${redirectUri}&code=${code}&v=5.131`;
