@@ -42,6 +42,7 @@
 
       floatingOneTap.render({
         scheme: 'dark',
+        contentId: 1,
         appName: 'geomap',
         showAlternativeLogin: true
       })
@@ -55,14 +56,14 @@
           .then(vkidOnSuccess)
           .catch(vkidOnError);
       });
-
+    
       function vkidOnSuccess(data) {
         floatingOneTap.close();
         console.log("Authorization successful!", data);
         
         // Здесь обработайте полученные токены и обновите UI
       }
-
+    
       function vkidOnError(error) {
         console.error("VKID Auth error:", error);
         // Обработка ошибки
