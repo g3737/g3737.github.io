@@ -1,6 +1,6 @@
 let myMap; 
 
-window.onload = function() {
+window.onload = function () {
     const accessToken = sessionStorage.getItem("vk_access_token");
     const userId = sessionStorage.getItem("vk_user_id");
 
@@ -16,6 +16,7 @@ window.onload = function() {
     document.getElementById('startDate').value = lastMonth.toISOString().split('T')[0];
     document.getElementById('endDate').value = today.toISOString().split('T')[0];
 };
+
 
 // Инициализация карты при загрузке страницы
 ymaps.ready(initMap);
