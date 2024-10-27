@@ -102,14 +102,14 @@ function applyFilters(clickedCoords) {
 
 // Получение фотографий по координатам и другим параметрам
 function fetchPhotos(lat, long, startTime, endTime, radius) {
-    const accessToken = sessionStorage.getItem("vk_access_token");
+    const accessToken = token;
     const userId = sessionStorage.getItem("vk_user_id");
 
     if (!accessToken || !userId) {
         console.error("VK access token or user ID is missing.");
         return;
     }
- console.log("Token:", accessToken);
+ console.log("Token:", token);
     const url = `https://api.vk.com/method/photos.search?` +
                 `lat=${lat}&long=${long}&start_time=${startTime}&end_time=${endTime}&` +
                 `radius=${radius}&count=20&access_token=${accessToken}&v=5.131`;
