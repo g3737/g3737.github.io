@@ -26,17 +26,20 @@
     if ('VKIDSDK' in window) {
       const VKID = window.VKIDSDK;
 
-      // Инициализация VKID SDK
+      // Генерация кодов
+      const codeVerifier = VKID.Auth.generateCodeVerifier();
+      const codeChallenge = VKID.Auth.generateCodeChallenge(codeVerifier);
+
       VKID.Config.init({
         app: 52496362,
         redirectUrl: 'https://g3737.github.io',
         responseMode: VKID.ConfigResponseMode.Callback,
         source: VKID.ConfigSource.LOWCODE,
+        codeChallenge: codeChallenge, // Передача codeChallenge
       });
 
       const floatingOneTap = new VKID.FloatingOneTap();
 
-      // Отображение кнопки авторизации
       floatingOneTap.render({
         scheme: 'dark',
         appName: 'geomap',
@@ -47,56 +50,27 @@
         const code = payload.code;
         const deviceId = payload.device_id;
 
-        // Обмен кода на токены
-        VKID.Auth.exchangeCode(code, deviceId)
+        // Обмен кода на токены с использованием codeVerifier
+        VKID.Auth.exchangeCode(code, deviceId, { codeVerifier })
           .then(vkidOnSuccess)
           .catch(vkidOnError);
       });
-    
-      // Обработка успешной авторизации
+
       function vkidOnSuccess(data) {
         floatingOneTap.close();
-
-        const { access_token, user_id } = data;
-
-        // Получение информации о пользователе
-        fetch(`https://api.vk.com/method/users.get?user_ids=${user_id}&access_token=${access_token}&v=5.131`)
-          .then(response => response.json())
-          .then(result => {
-            if (result.response && result.response.length > 0) {
-              const userName = `${result.response[0].first_name} ${result.response[0].last_name}`;
-              displayUserProfile(userName, access_token);
-            }
-          })
-          .catch(error => console.error('Ошибка при получении данных пользователя:', error));
+        console.log("Authorization successful!", data);
+        
+        // Здесь обработайте полученные токены и обновите UI
       }
-    
-      // Обработка ошибок
+
       function vkidOnError(error) {
-        console.error("Ошибка авторизации VKID:", error);
+        console.error("VKID Auth error:", error);
+        // Обработка ошибки
       }
-
-      // Отображение профиля пользователя
-      function displayUserProfile(name, accessToken) {
-        const profileSection = document.createElement('div');
-        profileSection.innerHTML = `
-          <p>Привет, ${name}!</p>
-          <button onclick="logout('${accessToken}')">Выйти</button>
-        `;
-        document.body.prepend(profileSection);
-      }
-
-      // Функция выхода из аккаунта
-      window.logout = function(accessToken) {
-        VKID.Auth.logout(accessToken)
-          .then(() => {
-            location.reload();
-          })
-          .catch(error => console.error('Ошибка при выходе из аккаунта:', error));
-      };
     }
   </script>
 </div>
+
 
 
 
