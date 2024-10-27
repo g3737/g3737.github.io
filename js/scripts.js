@@ -1,11 +1,12 @@
-let myMap; 
+let myMap;
+let currentPage = 1; 
+const photosPerPage = 20; 
 
 window.onload = function() {
     const accessToken = sessionStorage.getItem("vk_access_token");
     const userId = sessionStorage.getItem("vk_user_id");
 
     if (accessToken && userId) {
-        // Загрузить профиль
         vkidOnSuccess({ access_token: accessToken, user_id: userId });
     }
 
@@ -27,28 +28,17 @@ function initMap() {
         zoom: 13
     });
 
-    // Добавляем обработчик кликов на карту
     myMap.events.add('click', function (e) {
-        var coords = e.get('coords'); // Получаем координаты клика
-        console.log("Map clicked at coords:", coords); // Логируем координаты
-
-        // Проверяем, что coords существуют и передаем их в applyFilters
-        if (coords && coords.length === 2) {
-            applyFilters(coords); // Передаем координаты в applyFilters
-        } else {
-            console.log("No valid coordinates found on map click.");
-        }
+        var coords = e.get('coords'); 
+        applyFilters(coords); 
     });
 }
 
-// Функция для отображения круга на карте
 function drawCircle(coords, radius) {
-    // Удаляем предыдущий круг, если он есть
     if (myMap.circle) {
         myMap.geoObjects.remove(myMap.circle);
     }
 
-    // Создаем круг
     myMap.circle = new ymaps.Circle([coords, radius], {
         balloonContent: `Radius: ${radius} m`
     }, {
@@ -57,7 +47,6 @@ function drawCircle(coords, radius) {
         strokeWidth: 2
     });
 
-    // Добавляем круг на карту
     myMap.geoObjects.add(myMap.circle);
 }
 
@@ -73,8 +62,6 @@ function applyFilters(clickedCoords) {
     fetchPhotos(clickedCoords[0], clickedCoords[1], startDate, endDate, radius);
 }
 
-
-// Получение фотографий по координатам и другим параметрам
 function fetchPhotos(lat, long, startTime, endTime, radius) {
     const accessToken = sessionStorage.getItem("vk_access_token");
     const userId = sessionStorage.getItem("vk_user_id");
@@ -83,16 +70,17 @@ function fetchPhotos(lat, long, startTime, endTime, radius) {
         console.error("VK access token or user ID is missing.");
         return;
     }
- console.log("Token:", accessToken);
-    const url = `https://api.vk.com/method/photos.search?` +
+
+    const url = `https://cors-anywhere.herokuapp.com/https://api.vk.com/method/photos.search?` +
                 `lat=${lat}&long=${long}&start_time=${startTime}&end_time=${endTime}&` +
-                `radius=${radius}&count=20&access_token=${accessToken}&v=5.131`;
+                `radius=${radius}&count=${photosPerPage}&access_token=${accessToken}&v=5.131&page=${currentPage}`;
 
     fetch(url)
         .then(response => response.json())
         .then(data => {
             if (data.response) {
                 displayPhotos(data.response.items);
+                updatePagination(data.response.count); 
             } else {
                 console.error("Error fetching photos:", data);
             }
@@ -100,7 +88,6 @@ function fetchPhotos(lat, long, startTime, endTime, radius) {
         .catch(error => console.error("Error:", error));
 }
 
-// Отображение фотографий в галерее
 function displayPhotos(photos) {
     const gallery = document.getElementById("photoGallery");
     gallery.innerHTML = "";
@@ -113,19 +100,45 @@ function displayPhotos(photos) {
     });
 }
 
+function updatePagination(totalPhotos) {
+    const totalPages = Math.ceil(totalPhotos / photosPerPage);
+    document.getElementById("pageInfo").textContent = `Page ${currentPage} of ${totalPages}`;
+    document.getElementById("prevPage").disabled = currentPage === 1;
+    document.getElementById("nextPage").disabled = currentPage === totalPages;
+}
+
+function changePage(direction) {
+    currentPage += direction;
+
+    if (currentPage < 1) {
+        currentPage = 1;
+    }
+
+    fetchPhotos(); 
+}
+
+function login() {
+    const vkAppId = 52496362; // Ваш ID приложения VK
+    VKIDSDK.Auth.login(vkAppId)
+        .then(data => {
+            vkidOnSuccess(data);
+        })
+        .catch(error => console.error("Login error:", error));
+}
+
 function vkidOnSuccess(data) {
     const { access_token, user_id } = data;
     sessionStorage.setItem("vk_access_token", access_token);
     sessionStorage.setItem("vk_user_id", user_id);
 
-    // Запрос к VK API для получения имени профиля
-    fetch(`https://api.vk.com/method/users.get?user_ids=${user_id}&access_token=${access_token}&v=5.131`)
+    fetch(`https://cors-anywhere.herokuapp.com/https://api.vk.com/method/users.get?user_ids=${user_id}&access_token=${access_token}&v=5.131`)
         .then(response => response.json())
         .then(profileData => {
             if (profileData.response && profileData.response.length > 0) {
                 const profileName = profileData.response[0].first_name + " " + profileData.response[0].last_name;
                 document.getElementById("profileName").textContent = profileName;
-                document.getElementById("profileInfo").style.display = "block"; // Показать информацию профиля
+                document.getElementById("profileInfo").style.display = "block"; 
+                document.getElementById("vkLoginButton").style.display = "none"; 
             } else {
                 console.error("Profile data not found:", profileData);
             }
@@ -133,7 +146,6 @@ function vkidOnSuccess(data) {
         .catch(error => console.error("Error fetching profile:", error));
 }
 
-// Функция выхода из VKID
 function logout() {
     const accessToken = sessionStorage.getItem("vk_access_token");
 
@@ -142,7 +154,8 @@ function logout() {
             .then(() => {
                 sessionStorage.removeItem("vk_access_token");
                 sessionStorage.removeItem("vk_user_id");
-                document.getElementById("profileInfo").style.display = "none"; // Скрыть информацию профиля
+                document.getElementById("profileInfo").style.display = "none"; 
+                document.getElementById("vkLoginButton").style.display = "block"; 
                 alert("Logged out successfully");
             })
             .catch(error => console.error("Logout error:", error));
