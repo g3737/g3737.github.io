@@ -1,14 +1,39 @@
 let myMap; 
 
+
+// После перенаправления на ваш redirect_uri
 window.onload = function() {
-    const accessToken = sessionStorage.getItem("vk_access_token");
-    const userId = sessionStorage.getItem("vk_user_id");
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get('code');
 
-    if (accessToken && userId) {
-        // Загрузить профиль
-        vkidOnSuccess({ access_token: accessToken, user_id: userId });
+    if (code) {
+        exchangeCodeForToken(code);
     }
+};
 
+function exchangeCodeForToken(code) {
+    const clientId = "<идентификатор приложения>";
+    const clientSecret = "<секретный ключ приложения>";
+    const redirectUri = "https://g3737.github.io"; // ваш адрес перенаправления
+
+    const tokenUrl = `https://api.vk.com/oauth/access_token?client_id=${clientId}&client_secret=${clientSecret}&redirect_uri=${redirectUri}&code=${code}&v=5.131`;
+
+    fetch(tokenUrl)
+        .then(response => response.json())
+        .then(data => {
+            if (data.access_token) {
+                sessionStorage.setItem("vk_access_token", data.access_token);
+                sessionStorage.setItem("vk_user_id", data.user_id);
+                loadUserProfile(data.access_token, data.user_id); // Загрузить информацию о профиле
+            } else {
+                console.error("Error getting access token:", data);
+            }
+        })
+        .catch(error => console.error("Error:", error));
+}
+
+window.onload = function() {
+ 
     const today = new Date();
     const lastMonth = new Date();
     lastMonth.setMonth(today.getMonth() - 1);

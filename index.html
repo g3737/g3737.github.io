@@ -71,65 +71,24 @@
 </div>
 
 <div>
-    <script src="https://unpkg.com/@vkid/sdk@<3.0.0/dist-sdk/umd/index.js"></script>
-    <script type="text/javascript">
-        if ('VKIDSDK' in window) {
-            const VKID = window.VKIDSDK;
-
-            VKID.Config.init({
-                app: 52496362,
-                redirectUrl: 'https://g3737.github.io',
-                responseMode: VKID.ConfigResponseMode.Callback,
-                source: VKID.ConfigSource.LOWCODE,
-            });
-
-            const floatingOneTap = new VKID.FloatingOneTap();
-
-            floatingOneTap.render({
-                scheme: 'dark',
-                appName: 'geomap',
-                showAlternativeLogin: true
-            })
-            .on(VKID.WidgetEvents.ERROR, vkidOnError)
-            .on(VKID.FloatingOneTapInternalEvents.LOGIN_SUCCESS, function (payload) {
-                const code = payload.code;
-                const deviceId = payload.device_id;
-
-                VKID.Auth.exchangeCode(code, deviceId)
-                    .then(vkidOnSuccess)
-                    .catch(vkidOnError);
-            });
-        
-            function vkidOnSuccess(data) {
-                floatingOneTap.close();
-                // Обработка полученного результата
-                const { access_token, user_id } = data;
-                sessionStorage.setItem("vk_access_token", access_token);
-                sessionStorage.setItem("vk_user_id", user_id);
-                loadUserProfile(access_token, user_id);
-            }
-        
-            function vkidOnError(error) {
-                console.error("VKIDSDK error:", error);
-            }
-
-            function loadUserProfile(accessToken, userId) {
-                fetch(`https://api.vk.com/method/users.get?user_ids=${userId}&access_token=${accessToken}&v=5.131`)
-                    .then(response => response.json())
-                    .then(profileData => {
-                        if (profileData.response && profileData.response.length > 0) {
-                            const profileName = profileData.response[0].first_name + " " + profileData.response[0].last_name;
-                            document.getElementById("profileName").textContent = profileName;
-                            document.getElementById("profileInfo").style.display = "block"; // Показать информацию профиля
-                        } else {
-                            console.error("Profile data not found:", profileData);
-                        }
-                    })
-                    .catch(error => console.error("Error fetching profile:", error));
-            }
-        }
-    </script>
+    <button id="vkLoginButton">Login with VK</button>
 </div>
+
+<script>
+    document.getElementById("vkLoginButton").addEventListener("click", function() {
+        const clientId = "<идентификатор приложения>";
+        const redirectUri = "https://g3737.github.io"; // ваш адрес перенаправления
+        const state = "random_string"; // произвольная строка состояния
+        const scope = "friends,photos"; // права доступа, которые вам нужны
+        const codeChallenge = "your_code_challenge"; // преобразованный code_verifier
+        const codeChallengeMethod = "S256"; // метод преобразования
+
+        const authUrl = `https://id.vk.com/authorize?response_type=code&client_id=${clientId}&redirect_uri=${redirectUri}&state=${state}&code_challenge=${codeChallenge}&code_challenge_method=${codeChallengeMethod}&scope=${scope}`;
+
+        window.location.href = authUrl; // Перенаправление на страницу авторизации
+    });
+</script>
+
 
 </body>
 </html>
