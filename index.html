@@ -26,54 +26,40 @@
     if ('VKIDSDK' in window) {
       const VKID = window.VKIDSDK;
 
-      // Генерация codeVerifier и codeChallenge
-      function generateCodeVerifier() {
-        const array = new Uint8Array(32);
-        window.crypto.getRandomValues(array);
-        return Array.from(array, byte => ('0' + byte.toString(16)).slice(-2)).join('');
-      }
+      // Инициализация VKID SDK
+      VKID.Config.init({
+        app: 52496362,
+        redirectUrl: 'https://g3737.github.io',
+        responseMode: VKID.ConfigResponseMode.Callback,
+        source: VKID.ConfigSource.LOWCODE,
+      });
 
-      async function generateCodeChallenge(verifier) {
-        const encoder = new TextEncoder();
-        const data = encoder.encode(verifier);
-        const digest = await window.crypto.subtle.digest('SHA-256', data);
-        return btoa(String.fromCharCode.apply(null, new Uint8Array(digest)))
-          .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-      }
+      const floatingOneTap = new VKID.FloatingOneTap();
 
-      const codeVerifier = generateCodeVerifier();
-      generateCodeChallenge(codeVerifier).then(codeChallenge => {
-        VKID.Config.init({
-          app: 52496362,
-          redirectUrl: 'https://g3737.github.io',
-          responseMode: VKID.ConfigResponseMode.Callback,
-          source: VKID.ConfigSource.LOWCODE,
-          codeChallenge: codeChallenge,
-          codeChallengeMethod: 'S256'
-        });
+      // Отображение кнопки авторизации
+      floatingOneTap.render({
+        scheme: 'dark',
+        appName: 'geomap',
+        showAlternativeLogin: true
+      })
+      .on(VKID.WidgetEvents.ERROR, vkidOnError)
+      .on(VKID.FloatingOneTapInternalEvents.LOGIN_SUCCESS, function (payload) {
+        const code = payload.code;
+        const deviceId = payload.device_id;
 
-        const floatingOneTap = new VKID.FloatingOneTap();
-
-        floatingOneTap.render({
-          scheme: 'dark',
-          appName: 'geomap',
-          showAlternativeLogin: true
-        })
-        .on(VKID.WidgetEvents.ERROR, vkidOnError)
-        .on(VKID.FloatingOneTapInternalEvents.LOGIN_SUCCESS, function (payload) {
-          const code = payload.code;
-          const deviceId = payload.device_id;
-
-          VKID.Auth.exchangeCode(code, deviceId, { codeVerifier })
-            .then(vkidOnSuccess)
-            .catch(vkidOnError);
-        });
+        // Обмен кода на токены
+        VKID.Auth.exchangeCode(code, deviceId)
+          .then(vkidOnSuccess)
+          .catch(vkidOnError);
       });
     
+      // Обработка успешной авторизации
       function vkidOnSuccess(data) {
         floatingOneTap.close();
+
         const { access_token, user_id } = data;
 
+        // Получение информации о пользователе
         fetch(`https://api.vk.com/method/users.get?user_ids=${user_id}&access_token=${access_token}&v=5.131`)
           .then(response => response.json())
           .then(result => {
@@ -85,10 +71,12 @@
           .catch(error => console.error('Ошибка при получении данных пользователя:', error));
       }
     
+      // Обработка ошибок
       function vkidOnError(error) {
         console.error("Ошибка авторизации VKID:", error);
       }
 
+      // Отображение профиля пользователя
       function displayUserProfile(name, accessToken) {
         const profileSection = document.createElement('div');
         profileSection.innerHTML = `
@@ -98,13 +86,14 @@
         document.body.prepend(profileSection);
       }
 
-      function logout(accessToken) {
+      // Функция выхода из аккаунта
+      window.logout = function(accessToken) {
         VKID.Auth.logout(accessToken)
           .then(() => {
             location.reload();
           })
           .catch(error => console.error('Ошибка при выходе из аккаунта:', error));
-      }
+      };
     }
   </script>
 </div>
